@@ -62,6 +62,37 @@
             align-items: center;
             z-index: 50;
         }
+
+        /* Table Specific Enhancements */
+        .data-table-row:nth-child(even) {
+            background-color: rgba(249, 250, 251, 0.8);
+        }
+        .data-table-row:hover {
+            background-color: rgba(239, 246, 255, 1) !important;
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+
+        /* Select styling */
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1.2rem;
+        }
+
+        /* Modal Animation */
+        #details-modal {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #details-modal.active .modal-content {
+            transform: scale(1);
+        }
     </style>
 </head>
 <body class="p-4 md:p-8 lg:p-12">
@@ -70,42 +101,96 @@
     <div id="loading" class="loading-overlay">
         <div class="text-center">
             <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-black mb-4"></div>
-            <p class="text-gray-500 font-medium italic">부동산 데이터를 불러오는 중...</p>
+            <p class="text-gray-500 font-medium italic">부동산 데이터를 분석하는 중...</p>
+        </div>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div id="details-modal" class="fixed inset-0 bg-black/40 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4">
+        <div class="modal-content bg-white w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl">
+            <div class="p-8">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <span id="modal-dong" class="text-blue-600 font-bold text-xs uppercase tracking-widest mb-1 block"></span>
+                        <h2 id="modal-apt-name" class="text-3xl font-bold tracking-tight">아파트 정보</h2>
+                    </div>
+                    <button onclick="closeModal()" class="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                        <i data-lucide="x" class="text-gray-400"></i>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-8">
+                    <div class="p-4 bg-gray-50 rounded-2xl">
+                        <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">거래금액</p>
+                        <p id="modal-price" class="text-xl font-bold text-red-600"></p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-2xl">
+                        <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">전용면적</p>
+                        <p id="modal-area" class="text-xl font-bold text-gray-800"></p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-2xl">
+                        <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">거래일자</p>
+                        <p id="modal-date" class="text-lg font-semibold text-gray-600"></p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-2xl">
+                        <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">해당층 / 건축년도</p>
+                        <p id="modal-info" class="text-lg font-semibold text-gray-600"></p>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <a id="search-naver" href="#" target="_blank" class="flex items-center justify-between w-full p-4 bg-green-50 text-green-700 rounded-2xl font-bold hover:bg-green-100 transition-colors">
+                        <span>네이버 부동산에서 확인하기</span>
+                        <i data-lucide="external-link" size="18"></i>
+                    </a>
+                    <button onclick="closeModal()" class="w-full py-4 bg-black text-white rounded-2xl font-bold hover:opacity-80 transition-opacity">
+                        닫기
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="max-w-7xl mx-auto">
         <!-- Header -->
-        <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <header class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-                <h1 class="text-4xl font-bold tracking-tight gradient-text mb-2">우리 동네 아파트 실거래가 대시보드</h1>
-                <p class="text-gray-500 flex items-center gap-2">
+                <h1 class="text-4xl font-bold tracking-tight gradient-text mb-2 text-center md:text-left">우리 동네 아파트 실거래가 대시보드</h1>
+                <p class="text-gray-500 flex items-center justify-center md:justify-start gap-2 text-sm">
                     <i data-lucide="map-pin" size="18"></i> 
-                    강남구 실거래 데이터를 실시간으로 시각화합니다.
+                    데이터를 클릭하면 상세 거래 정보를 확인할 수 있습니다.
                 </p>
             </div>
-            <div class="text-sm text-gray-400 font-medium">
-                Last updated: <span id="current-date"></span>
+            
+            <!-- Neighborhood Filter -->
+            <div class="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-100 min-w-[240px]">
+                <div class="pl-3 text-gray-400">
+                    <i data-lucide="search" size="18"></i>
+                </div>
+                <select id="dong-filter" class="custom-select w-full py-2 pr-10 pl-1 bg-transparent border-none focus:ring-0 text-sm font-semibold text-gray-700 cursor-pointer">
+                    <option value="전체">전체 동네 보기</option>
+                </select>
             </div>
         </header>
 
         <!-- Bento Grid Layout -->
         <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6">
             
-            <!-- Summary Stats -->
+            <!-- Summary Stats: Trade Count -->
             <div class="md:col-span-2 lg:col-span-2 bento-card p-6 flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between mb-4">
-                        <span class="text-gray-500 text-sm font-semibold uppercase tracking-wider">전체 거래 건수</span>
+                        <span class="text-gray-500 text-sm font-semibold uppercase tracking-wider">거래 건수</span>
                         <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
                             <i data-lucide="bar-chart-3"></i>
                         </div>
                     </div>
                     <div class="text-5xl font-bold mb-1" id="stat-total-count">-</div>
-                    <p class="text-gray-400 text-sm">최근 3개월 기준</p>
+                    <p class="text-gray-400 text-sm">선택 지역 기준</p>
                 </div>
             </div>
 
+            <!-- Summary Stats: Avg Price -->
             <div class="md:col-span-2 lg:col-span-2 bento-card p-6 flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between mb-4">
@@ -114,11 +199,17 @@
                             <i data-lucide="calculator"></i>
                         </div>
                     </div>
-                    <div class="text-4xl font-bold mb-1"><span id="stat-avg-price">-</span><span class="text-xl font-normal text-gray-400 ml-1">만원</span></div>
-                    <p class="text-gray-400 text-sm">거래 데이터 산술 평균</p>
+                    <div class="flex items-baseline gap-2 mb-1">
+                        <div class="text-4xl font-bold" id="stat-avg-price">-</div>
+                        <div class="text-xl font-normal text-gray-400">만원</div>
+                    </div>
+                    <div id="stat-price-change" class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">
+                        전월 대비 데이터 없음
+                    </div>
                 </div>
             </div>
 
+            <!-- Summary Stats: Max/Min -->
             <div class="md:col-span-2 lg:col-span-2 bento-card p-6">
                 <div class="flex items-center justify-between mb-6">
                     <span class="text-gray-500 text-sm font-semibold uppercase tracking-wider">최고 / 최저가</span>
@@ -152,29 +243,33 @@
             <!-- Side Info Section -->
             <div class="md:col-span-2 lg:col-span-2 bento-card p-8 bg-black text-white overflow-hidden relative">
                 <div class="relative z-10">
-                    <h3 class="text-xl font-bold mb-4">Smart Insight</h3>
+                    <h3 class="text-xl font-bold mb-4">Interactivity</h3>
                     <p class="text-gray-400 text-sm leading-relaxed mb-6">
-                        최근 강남구 거래 데이터에 따르면 중대형 평형대의 선호도가 높게 나타나고 있습니다. 
-                        특히 건축년도 10년 미만의 단지들이 전체 거래의 주요 비중을 차지하고 있습니다.
+                        아래 리스트에서 거래 내역을 클릭해 보세요. 해당 단지의 상세 평형과 층수 정보를 팝업을 통해 자세히 확인하실 수 있습니다.
                     </p>
+                    <div class="text-xs text-gray-400 mb-4 flex items-center gap-2">
+                        <i data-lucide="calendar" size="14"></i> Last Update: <span id="current-date"></span>
+                    </div>
                     <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full text-xs font-semibold hover:bg-white/20 transition-colors cursor-pointer">
-                        자세한 분석 보고서 보기 <i data-lucide="arrow-right" size="14"></i>
+                        리포트 공유 <i data-lucide="share-2" size="14"></i>
                     </div>
                 </div>
-                <!-- Subtle background design -->
                 <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl"></div>
             </div>
 
             <!-- Table Section -->
             <div class="md:col-span-4 lg:col-span-6 bento-card overflow-hidden">
                 <div class="p-6 border-b border-gray-100 flex items-center justify-between bg-white/50">
-                    <h3 class="text-lg font-bold">전체 거래 내역 리스트</h3>
-                    <div class="text-xs text-gray-400">Total <span id="table-count">0</span> items</div>
+                    <div class="flex items-center gap-3">
+                        <h3 class="text-lg font-bold">상세 거래 내역</h3>
+                        <span class="px-2 py-1 bg-red-100 text-red-600 text-[10px] font-bold rounded uppercase">Highlight: 5억↑</span>
+                    </div>
+                    <div class="text-xs text-gray-400">조회된 데이터: <span id="table-count">0</span>건</div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-gray-50/50 text-gray-500 text-xs font-bold uppercase tracking-wider">
+                            <tr class="bg-gray-100/50 text-gray-500 text-xs font-bold uppercase tracking-wider">
                                 <th class="px-6 py-4">거래일자</th>
                                 <th class="px-6 py-4">아파트명</th>
                                 <th class="px-6 py-4">법정동</th>
@@ -184,7 +279,7 @@
                                 <th class="px-6 py-4 text-center">건축년도</th>
                             </tr>
                         </thead>
-                        <tbody id="data-table-body" class="text-sm divide-y divide-gray-50">
+                        <tbody id="data-table-body" class="text-sm divide-y divide-gray-100">
                             <!-- Data rows will be injected here -->
                         </tbody>
                     </table>
@@ -195,11 +290,14 @@
 
         <!-- Footer -->
         <footer class="mt-16 pb-8 text-center text-gray-400 text-xs tracking-widest uppercase">
-            © 2026 LEARNTOPIA. All Rights Reserved.
+            © 2026 LEARNTOPIA. All Rights Rights Reserved.
         </footer>
     </div>
 
     <script>
+        let allData = [];
+        let trendChartInstance = null;
+
         document.addEventListener('DOMContentLoaded', function() {
             lucide.createIcons();
             document.getElementById('current-date').innerText = new Date().toLocaleDateString('ko-KR');
@@ -210,42 +308,53 @@
                 download: true,
                 header: true,
                 complete: function(results) {
-                    processData(results.data);
+                    allData = results.data.filter(row => row['거래일자'] && row['아파트명']);
+                    initFilter();
+                    updateDashboard('전체');
                     document.getElementById('loading').style.display = 'none';
-                },
-                error: function(err) {
-                    console.error("CSV Loading Error:", err);
-                    alert("데이터를 불러오는 중 오류가 발생했습니다.");
                 }
+            });
+
+            document.getElementById('dong-filter').addEventListener('change', e => updateDashboard(e.target.value));
+            
+            // 모달 외부 클릭 시 닫기
+            window.addEventListener('click', e => {
+                if(e.target === document.getElementById('details-modal')) closeModal();
             });
         });
 
-        function processData(data) {
-            // 빈 행 제거 및 데이터 정제
-            const cleanData = data.filter(row => row['거래일자'] && row['아파트명']);
-            
-            // 1. 요약 정보 계산
-            const prices = cleanData.map(d => parseInt(d['거래금액(만원)'].replace(/,/g, '')));
-            const totalCount = cleanData.length;
+        function initFilter() {
+            const filterSelect = document.getElementById('dong-filter');
+            const dongs = [...new Set(allData.map(d => d['법정동']))].sort();
+            dongs.forEach(dong => {
+                const option = document.createElement('option');
+                option.value = dong;
+                option.innerText = dong;
+                filterSelect.appendChild(option);
+            });
+        }
+
+        function updateDashboard(selectedDong) {
+            const filteredData = (selectedDong === '전체') ? allData : allData.filter(d => d['법정동'] === selectedDong);
+            if (filteredData.length === 0) return;
+
+            const prices = filteredData.map(d => parseInt(d['거래금액(만원)'].replace(/,/g, '')));
+            const totalCount = filteredData.length;
             const avgPrice = Math.round(prices.reduce((a, b) => a + b, 0) / totalCount);
             const maxPrice = Math.max(...prices);
             const minPrice = Math.min(...prices);
 
-            // UI 업데이트
             document.getElementById('stat-total-count').innerText = totalCount.toLocaleString();
             document.getElementById('stat-avg-price').innerText = avgPrice.toLocaleString();
             document.getElementById('stat-max-price').innerText = maxPrice.toLocaleString() + " 만원";
             document.getElementById('stat-min-price').innerText = minPrice.toLocaleString() + " 만원";
             document.getElementById('table-count').innerText = totalCount;
 
-            // 2. 차트 데이터 가공 (월별 평균)
             const monthlyData = {};
-            cleanData.forEach(d => {
-                const month = d['거래일자'].substring(0, 7); // "YYYY-MM"
+            filteredData.forEach(d => {
+                const month = d['거래일자'].substring(0, 7);
                 const price = parseInt(d['거래금액(만원)'].replace(/,/g, ''));
-                if (!monthlyData[month]) {
-                    monthlyData[month] = { sum: 0, count: 0 };
-                }
+                if (!monthlyData[month]) monthlyData[month] = { sum: 0, count: 0 };
                 monthlyData[month].sum += price;
                 monthlyData[month].count += 1;
             });
@@ -253,35 +362,92 @@
             const sortedMonths = Object.keys(monthlyData).sort();
             const avgMonthlyPrices = sortedMonths.map(m => Math.round(monthlyData[m].sum / monthlyData[m].count));
 
+            calculatePriceChange(avgMonthlyPrices);
             renderChart(sortedMonths, avgMonthlyPrices);
+            renderTable(filteredData);
+        }
 
-            // 3. 테이블 렌더링
+        function calculatePriceChange(avgMonthlyPrices) {
+            const changeBadge = document.getElementById('stat-price-change');
+            if (avgMonthlyPrices.length < 2) {
+                changeBadge.innerText = "비교 데이터 부족";
+                changeBadge.className = "inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-400";
+                return;
+            }
+            const currentAvg = avgMonthlyPrices[avgMonthlyPrices.length - 1];
+            const prevAvg = avgMonthlyPrices[avgMonthlyPrices.length - 2];
+            const changeRate = ((currentAvg - prevAvg) / prevAvg * 100).toFixed(1);
+
+            if (changeRate > 0) {
+                changeBadge.innerText = `▲ ${changeRate}% 올랐어요`;
+                changeBadge.className = "inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-red-50 text-red-600";
+            } else if (changeRate < 0) {
+                changeBadge.innerText = `▼ ${Math.abs(changeRate)}% 내렸어요`;
+                changeBadge.className = "inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600";
+            } else {
+                changeBadge.innerText = "전월과 동일해요";
+                changeBadge.className = "inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500";
+            }
+        }
+
+        function renderTable(data) {
             const tbody = document.getElementById('data-table-body');
-            cleanData.forEach(row => {
+            tbody.innerHTML = '';
+            data.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50/50 transition-colors";
+                tr.className = "data-table-row transition-colors";
+                
+                const rawPrice = parseInt(row['거래금액(만원)'].replace(/,/g, ''));
+                const priceColorClass = rawPrice >= 50000 ? "text-red-600 font-bold" : "text-blue-600 font-bold";
+
                 tr.innerHTML = `
                     <td class="px-6 py-4 font-medium text-gray-500">${row['거래일자']}</td>
-                    <td class="px-6 py-4 font-bold">${row['아파트명']}</td>
+                    <td class="px-6 py-4 font-bold text-gray-800">${row['아파트명']}</td>
                     <td class="px-6 py-4 text-gray-600">${row['법정동']}</td>
-                    <td class="px-6 py-4 text-right text-gray-600">${row['전용면적(㎡)']}</td>
+                    <td class="px-6 py-4 text-right text-gray-600 font-mono">${row['전용면적(㎡)']}</td>
                     <td class="px-6 py-4 text-center text-gray-600">${row['층']}</td>
-                    <td class="px-6 py-4 text-right font-bold text-blue-600">${row['거래금액(만원)']}</td>
+                    <td class="px-6 py-4 text-right ${priceColorClass}">${row['거래금액(만원)']}</td>
                     <td class="px-6 py-4 text-center text-gray-400">${row['건축년도']}</td>
                 `;
+                
+                tr.addEventListener('click', () => openModal(row));
                 tbody.appendChild(tr);
             });
         }
 
+        function openModal(data) {
+            document.getElementById('modal-dong').innerText = data['법정동'];
+            document.getElementById('modal-apt-name').innerText = data['아파트명'];
+            document.getElementById('modal-price').innerText = data['거래금액(만원)'] + ' 만원';
+            document.getElementById('modal-area').innerText = data['전용면적(㎡)'] + ' ㎡';
+            document.getElementById('modal-date').innerText = data['거래일자'];
+            document.getElementById('modal-info').innerText = data['층'] + '층 / ' + data['건축년도'] + '년 건축';
+            
+            const naverUrl = `https://land.naver.com/search/search.naver?query=${encodeURIComponent(data['법정동'] + ' ' + data['아파트명'])}`;
+            document.getElementById('search-naver').href = naverUrl;
+
+            const modal = document.getElementById('details-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.add('active'), 10);
+            document.body.style.overflow = 'hidden';
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('details-modal');
+            modal.classList.remove('active');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+            document.body.style.overflow = '';
+        }
+
         function renderChart(labels, data) {
             const ctx = document.getElementById('trendChart').getContext('2d');
-            
-            // Gradient for line chart
+            if (trendChartInstance) trendChartInstance.destroy();
             const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-            gradient.addColorStop(0, 'rgba(0, 0, 0, 0.1)');
+            gradient.addColorStop(0, 'rgba(0, 0, 0, 0.08)');
             gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
-            new Chart(ctx, {
+            trendChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -289,33 +455,18 @@
                         label: '평균 거래가 (만원)',
                         data: data,
                         borderColor: '#000',
-                        borderWidth: 3,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: '#000',
-                        pointHoverRadius: 6,
+                        borderWidth: 2,
                         tension: 0.4,
                         fill: true,
                         backgroundColor: gradient
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
                     scales: {
-                        x: {
-                            grid: { display: false },
-                            ticks: { font: { size: 10, weight: '600' } }
-                        },
-                        y: {
-                            grid: { color: '#f0f0f0' },
-                            ticks: { 
-                                font: { size: 10 },
-                                callback: value => value.toLocaleString()
-                            }
-                        }
+                        x: { grid: { display: false } },
+                        y: { grid: { color: '#f0f0f0' }, ticks: { callback: v => v.toLocaleString() } }
                     }
                 }
             });
